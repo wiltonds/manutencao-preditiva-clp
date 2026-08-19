@@ -1,5 +1,7 @@
-asyncua>=1.0
+﻿streamlit>=1.30
+plotly>=5.18
 numpy
 scikit-learn
+asyncua>=1.0
 pymodbus>=3.6
 pyyaml
