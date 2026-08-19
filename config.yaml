@@ -1,0 +1,45 @@
+# A UNICA coisa que muda entre vendors e' este arquivo.
+# O gateway resolve tudo por NodeId, entao o mesmo modelo serve os tres.
+
+profiles:
+
+  # ---- Simulador local (plc_sim.py) ----
+  sim:
+    endpoint: "opc.tcp://localhost:4840/sme/plc"
+    features:
+      MotorCurrent_A: {nodeid: 'ns=2;s=Motor01.MotorCurrent_A'}
+      Vibration_mmps: {nodeid: 'ns=2;s=Motor01.Vibration_mmps'}
+      BearingTemp_C:  {nodeid: 'ns=2;s=Motor01.BearingTemp_C'}
+      Pressure_bar:   {nodeid: 'ns=2;s=Motor01.Pressure_bar'}
+    writeback:
+      AlarmActive:        {nodeid: 'ns=2;s=Motor01.AlarmActive'}
+      MaintenanceRequest: {nodeid: 'ns=2;s=Motor01.MaintenanceRequest'}
+      HealthScore:        {nodeid: 'ns=2;s=Motor01.HealthScore'}
+
+  # ---- OpenPLC via openplc_shim.py (Modbus -> OPC UA) ----
+  openplc:
+    endpoint: "opc.tcp://localhost:4842/openplc"
+    features:
+      MotorCurrent_A: {nodeid: 'ns=2;s=Motor01.MotorCurrent_A'}
+      Vibration_mmps: {nodeid: 'ns=2;s=Motor01.Vibration_mmps'}
+      BearingTemp_C:  {nodeid: 'ns=2;s=Motor01.BearingTemp_C'}
+      Pressure_bar:   {nodeid: 'ns=2;s=Motor01.Pressure_bar'}
+    writeback:
+      AlarmActive:        {nodeid: 'ns=2;s=Motor01.AlarmActive'}
+      MaintenanceRequest: {nodeid: 'ns=2;s=Motor01.MaintenanceRequest'}
+      HealthScore:        {nodeid: 'ns=2;s=Motor01.HealthScore'}
+
+  # ---- Siemens S7-1500 / PLCSIM Advanced (OPC UA nativo) ----
+  # Ative o servidor OPC UA no TIA Portal e exponha os tags do DB.
+  # ns e nomes seguem o padrao Siemens: ns=3;s="DB_Nome"."Tag"
+  siemens:
+    endpoint: "opc.tcp://192.168.0.1:4840"   # IP do CLP / PLCSIM
+    features:
+      MotorCurrent_A: {nodeid: 'ns=3;s="DB_Motor"."Current"'}
+      Vibration_mmps: {nodeid: 'ns=3;s="DB_Motor"."Vibration"'}
+      BearingTemp_C:  {nodeid: 'ns=3;s="DB_Motor"."BearingTemp"'}
+      Pressure_bar:   {nodeid: 'ns=3;s="DB_Motor"."Pressure"'}
+    writeback:
+      AlarmActive:        {nodeid: 'ns=3;s="DB_Motor"."Alarm"'}
+      MaintenanceRequest: {nodeid: 'ns=3;s="DB_Motor"."MaintReq"'}
+      HealthScore:        {nodeid: 'ns=3;s="DB_Motor"."Health"'}

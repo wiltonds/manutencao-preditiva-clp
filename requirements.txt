@@ -1,0 +1,5 @@
+asyncua>=1.0
+numpy
+scikit-learn
+pymodbus>=3.6
+pyyaml
