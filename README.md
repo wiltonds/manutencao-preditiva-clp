@@ -1,97 +1,139 @@
-# Ponte OPC UA: um modelo, dois vendors (OpenPLC + Siemens)
+# Predictive Maintenance at the Edge — OPC UA + ML
 
-Um gateway de borda que roda o modelo preditivo **uma vez** e conversa com
-qualquer CLP via OPC UA. Trocar de vendor = trocar de **perfil no config.yaml**,
-sem tocar no codigo do modelo.
+> Applied industrial AI project for anomaly detection and predictive maintenance, connecting PLC/Soft-PLC signals to edge analytics through a vendor-neutral OPC UA layer.
 
+**Portfolio focus:** Predictive Analytics · Industrial AI · Anomaly Detection · Edge Computing · OPC UA · Signal Processing · Decision Support
+
+![Architecture](./docs/architecture.svg)
+
+## Business Problem
+
+Industrial maintenance teams need to detect abnormal equipment behavior early enough to plan intervention without turning a predictive model into a safety-critical control loop.
+
+This project explores that boundary: **machine-learning analytics at the edge, integrated with industrial control infrastructure, while deterministic PLC logic remains responsible for critical interlocks.**
+
+## Solution
+
+The gateway reads industrial signals through OPC UA, applies the predictive model locally, and writes an advisory alert back to the control environment.
+
+The design separates:
+
+- **industrial communication** — OPC UA and vendor-specific integration;
+- **analytics** — anomaly detection and vibration features;
+- **decision support** — alert generation and maintenance signaling;
+- **safety control** — deterministic logic remains in the PLC.
+
+## Architecture
+
+`PLC / Soft-PLC → OPC UA → Edge Analytics → Risk / Alert → Decision Support`
+
+The same gateway logic can work with different PLC environments by changing the configuration profile rather than the predictive-model code.
+
+### Two analytical tracks
+
+**1. Multivariate anomaly detection**
+
+The gateway uses **Isolation Forest** to identify abnormal operating conditions from industrial signals.
+
+**2. Vibration analytics**
+
+The vibration track processes waveform data and extracts:
+
+- RMS;
+- crest factor;
+- kurtosis;
+- frequency-band energy;
+- 1× rotational frequency;
+- BPFO and 2× BPFO components.
+
+The objective is to demonstrate why spectral features can reveal bearing-related anomalies before a simple aggregate vibration metric becomes strongly abnormal.
+
+## Industrial Integration
+
+Supported development paths include:
+
+| Environment | Role |
+|---|---|
+| Soft-PLC simulator | Fast, reproducible development and testing |
+| OpenPLC | Open-source PLC integration through Modbus/OPC UA |
+| Siemens S7-1500 / PLCSIM Advanced | Industrial vendor integration through native OPC UA |
+
+The Siemens path is configuration-driven and depends on licensed Siemens/TIA tooling.
+
+## Safety & Governance
+
+The model is **advisory**, not a replacement for industrial control.
+
+> **AI raises the signal; the PLC remains responsible for deterministic critical interlocks.**
+
+In a production deployment, thresholds, writeback permissions, fail-safe behavior, network isolation, model validation and change management would require formal OT engineering and safety review.
+
+## Repository Structure
+
+```text
+gateway.py          # OPC UA gateway + anomaly model + writeback
+config.yaml         # environment profiles
+plc_sim.py          # OPC UA simulator
+openplc_shim.py     # Modbus ↔ OPC UA bridge
+plc_sim_vib.py      # vibration waveform simulator
+gateway_fft.py      # FFT + vibration feature extraction
 ```
-                         config.yaml (perfil)
-                                 |
-  [Siemens S7-1500/PLCSIM] --OPC UA nativo--\
-                                             +--> gateway.py --(writeback)--> CLP
-  [OpenPLC] --Modbus--> openplc_shim.py --OPC UA--/     (Isolation Forest)
-  [plc_sim.py] --OPC UA--------------------/
-```
 
-O ponto-chave: o `gateway.py` resolve **todas** as tags por NodeId. Siemens,
-OpenPLC (via shim) e o simulador expoem os mesmos nomes logicos, entao o mesmo
-modelo serve os tres. So o config muda.
+## Run Locally
 
-## Arquivos
-
-| Arquivo             | Papel                                                        |
-|---------------------|-------------------------------------------------------------|
-| `gateway.py`        | Gateway universal: le OPC UA, roda o modelo, escreve alerta |
-| `config.yaml`       | Perfis `sim` / `openplc` / `siemens` (a UNICA coisa que muda)|
-| `plc_sim.py`        | Simulador OPC UA (tambem emula um endpoint estilo Siemens)  |
-| `openplc_shim.py`   | Da' cara OPC UA ao OpenPLC (Modbus <-> OPC UA, dois sentidos)|
-
-## Rodar
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### A) Simulador (rapido, sem nada instalado)
-```bash
-python plc_sim.py           # terminal 1
-python gateway.py sim       # terminal 2
-```
+### Simulator
 
-### B) OpenPLC (open source, ladder real)
-1. Suba o OpenPLC Runtime com seu programa e o servidor Modbus (porta 502).
-2. Mapeie os located variables para os input/holding registers usados no
-   `openplc_shim.py` (veja o cabecalho do arquivo; ajuste enderecos/escala).
-```bash
-python openplc_shim.py      # terminal 1  (Modbus -> OPC UA em :4842)
-python gateway.py openplc   # terminal 2
-```
-
-### C) Siemens (S7-1500 / PLCSIM Advanced)
-1. No TIA Portal, ative o **servidor OPC UA** da CPU e marque os tags do DB
-   como acessiveis (leitura + escrita nos de writeback).
-2. Ajuste `endpoint` e os NodeIds no perfil `siemens` do `config.yaml`
-   (padrao Siemens: `ns=3;s="DB_Motor"."Current"`).
-```bash
-python gateway.py siemens
-```
-
-## O que ja foi validado
-- Gateway resolvendo tags por NodeId e escrevendo o alarme de volta (caminho
-  `sim`/`siemens`).
-- Shim OpenPLC nos dois sentidos: sensores Modbus -> OPC UA e writeback OPC UA
-  -> holding register.
-
-O perfil `siemens` e' config-only (PLCSIM/TIA sao licenciados). Ate ter a
-licenca, use `plc_sim.py` como stand-in: ele expoe NodeIds no mesmo esquema de
-enderecamento, entao o `gateway.py siemens` funciona sem mudar codigo -- so o
-endpoint.
-
-## Nota de seguranca OT
-O writeback e' **advisorio** (alarme + chamado). Em campo, o intertravamento
-critico fica no proprio CLP, determinístico. A IA levanta a mao; o CLP decide.
-
----
-
-## Track de vibracao com FFT (manutencao preditiva de rolamento)
-
-Versao mais proxima de um caso industrial real. O CLP publica a **forma de onda**
-da vibracao (nao um numero so), e o gateway faz a **FFT** para pegar o defeito
-na frequencia caracteristica (BPFO) antes de o RMS total subir.
-
-| Arquivo             | Papel                                                         |
-|---------------------|--------------------------------------------------------------|
-| `plc_sim_vib.py`    | Soft-PLC OPC UA que publica bloco de forma de onda (defeito BPFO cresce) |
-| `gateway_fft.py`    | Le a onda, extrai features de tempo (RMS, crest, kurtose) e frequencia (bandas 1x/BPFO/2xBPFO), detecta e escreve o alerta |
-
-Autonomo (nao usa config.yaml; endpoint proprio na porta 4841):
+Terminal 1:
 
 ```bash
-python plc_sim_vib.py     # terminal 1
-python gateway_fft.py     # terminal 2
+python plc_sim.py
 ```
 
-No terminal do gateway voce ve, lado a lado, quanto o **RMS** e a **energia BPFO**
-subiram vs baseline. A BPFO dispara muito antes -- foi por isso que se trocou a
-vibracao "crua" pela analise espectral. Ajuste `FR` e `BPFO` conforme a rotacao e
-o rolamento reais do seu ativo (a BPFO vem da geometria do rolamento x rotacao).
+Terminal 2:
+
+```bash
+python gateway.py sim
+```
+
+### Vibration / FFT track
+
+Terminal 1:
+
+```bash
+python plc_sim_vib.py
+```
+
+Terminal 2:
+
+```bash
+python gateway_fft.py
+```
+
+## What This Project Demonstrates
+
+- Integration of ML with industrial communication protocols.
+- Vendor-neutral architecture through OPC UA.
+- Edge inference rather than dependence on a central application.
+- Time-domain and frequency-domain signal analysis.
+- Separation between predictive analytics and safety-critical control.
+- A path from simulation to industrial integration.
+
+## Limitations
+
+This repository is a portfolio and engineering prototype. Simulated signals and development environments do not represent a production-certified predictive-maintenance system.
+
+Before industrial deployment, the model would require representative historical data, validated failure labels, calibration, drift monitoring, false-positive/false-negative analysis, cybersecurity controls and field validation.
+
+## Portfolio Perspective
+
+This project demonstrates a broader principle in applied AI:
+
+**Data → Signal Processing → Model → Operational Context → Decision Support**
+
+The value of industrial ML is not only the model itself. It is the ability to place analytics inside a reliable operational architecture without compromising deterministic control.
