@@ -4,6 +4,9 @@
 
 **Portfolio focus:** Predictive Analytics · Industrial AI · Anomaly Detection · Edge Computing · OPC UA · Signal Processing · Decision Support
 
+![Portfolio architecture](./docs/portfolio-hero.svg)
+
+
 ![Architecture](./docs/architecture.svg)
 
 ## Business Problem
