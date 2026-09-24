@@ -6,6 +6,19 @@
 
 ![Portfolio architecture](./docs/portfolio-hero.svg)
 
+## Application Demo
+
+![Predictive maintenance demo](./docs/screenshots/predictive-maintenance-demo.svg)
+
+> **Demo mode:** synthetic/illustrative data is used where production data or infrastructure is not appropriate for a public portfolio.
+
+Run locally:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+
 
 ![Architecture](./docs/architecture.svg)
 
